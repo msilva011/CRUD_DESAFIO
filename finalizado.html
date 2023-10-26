@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CRUD DESAFIO</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .form-control {
+            width: 40%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5 text-center">
+        <h1>CRUD DESAFIO</h1>
+        <div class="mt-4">
+            <div class="form-group">
+                <input type="text" class="form-control mx-auto" id="idInput" placeholder="ID pedido">
+            </div>
+            <button class="btn btn-primary mt-2" id="searchButton">Buscar</button>
+            <button class="btn btn-secondary mt-2" id="listButton">Listar Pedidos</button>
+            <button class="btn btn-success mt-2" id="newButton">Novo Pedido</button>
+        </div>
+        <table class="table table-bordered mt-4" id="pedidoTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Número do Pedido</th>
+                    <th>Valor Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aqui serão listados os pedidos -->
+            </tbody>
+        </table>
+        <div class="mt-4">
+            <div class="form-group ">
+
+                <button class="btn btn-secondary" id="listBtnItem">Listar Itens</button>
+
+            </div>
+        </div>
+
+        <table class="table table-bordered mt-4" id="itemTable">
+            <thead>
+                <tr>
+                    <th>ID Item</th>
+                    <th>Produto</th>
+                    <th>Quantidade</th>
+                    <th>Valor do Item</th>
+                    <th>ID Pedido</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aqui serão listados os itens -->
+            </tbody>
+        </table>
+        <!-- Formulário para criar um novo pedido -->
+        <div class="mt-4" style="display: none;" id="novoPedidoForm">
+            <h2>Criar Novo Pedido</h2>
+            <form>
+                <div class="form-group">
+                    <input type="text" class="form-control mx-auto" id="numeroPedidoInput"
+                        placeholder="Número do Pedido">
+                </div>
+                <div class="form-group">
+                    <input type="text" class="form-control mx-auto" id="valorTotalInput" placeholder="Valor Total">
+                </div>
+                <button class="btn btn-success mt-2" id="salvarPedidoButton">Salvar Pedido</button>
+            </form>
+        </div>
+        <!-- Formulário de edição de Pedido (inicialmente oculto) -->
+        <div class="mt-4" style="display: none;" id="editarPedidoForm">
+            <h2>Editar Pedido</h2>
+            <form>
+                <input type="hidden" id="pedidoIdInput">
+                <div class="form-group">
+                    <input type="text" class="form-control mx-auto" id="numeroPedidoEditInput"
+                        placeholder="Número do Pedido" readonly>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="form-control mx-auto" id="valorTotalEditInput" placeholder="Valor Total">
+                </div>
+                <button class="btn btn-success" id="btnFinalizarEditPedido" type="button">Finalizar Pedido</button>
+                <button class="btn btn-warning" id="adicionarItemEditButton" type="button">Adicionar Item</button>
+
+            </form>
+            <!-- Formulário de Itens (inicialmente oculto) -->
+            <div class="collapse" id="formItens">
+                <h2>Itens do Pedido</h2>
+                <form>
+                    <input type="hidden" id="itemIdInput">
+                    <div class="form-group">
+                        <input type="text" class="form-control mx-auto" id="codigoProdutoInput"
+                            placeholder="Código Produto">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control mx-auto" id="quantidadeInput" placeholder="Quantidade">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control mx-auto" id="valorItemInput" placeholder="Valor Item">
+                    </div>
+                    <button class="btn btn-success" id="salvarItemButton">Salvar Item</button>
+                    <button class="btn btn-success" id="btnFinalizarEditItem" type="button" data-id="">Finalizar
+                        Item</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js"></script>
+    <script>
+
+        // Função para listar todos os pedidos
+        function listarPedidos() {
+            $("#novoPedidoForm").hide();
+            $("#editarPedidoForm").hide();
+            $.ajax({
+                url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido",
+                method: "GET",
+                success: function (data) {
+                    $('#pedidoTable tbody').empty();
+                    updateTable(data);
+                },
+                error: function () {
+                    alert("Erro ao listar pedidos.");
+                }
+            });
+        }
+
+        // Função para listar itens
+        function listarItens() {
+            buscarDadosDaAPI();
+        }
+
+        // Função para adicionar um item
+        function adicionarItem() {
+            $("#formItens").show();
+            $("#adicionarItemEditButton").hide();
+            $("#btnFinalizarEditItem").hide();
+        }
+
+        // Função para buscar pedido por ID
+        function buscarPedidoPorID() {
+            var id = $("#idInput").val();
+            if (id !== "") {
+                filtrarTabela(id);
+                $.ajax({
+                    url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido/" + id,
+                    method: "GET",
+                    success: function (data) {
+                        $('#pedido-list').empty();
+                        if (Array.isArray(data)) {
+                            updateTable(data);
+                        } else {
+                            var dataArray = [data];
+                            updateTable(dataArray);
+                        }
+                    },
+                    error: function () {
+                        alert("Erro ao buscar pedido por ID.");
+                    }
+                });
+            }
+        }
+
+        // Função para mostrar o formulário de novo pedido
+        function mostrarFormularioNovoPedido() {
+            $("#novoPedidoForm").show();
+            $('html, body').animate({
+                scrollTop: $("#novoPedidoForm").offset().top
+            }, 600);
+            $("#editarPedidoForm").hide();
+        }
+
+        // Função para criar um novo pedido
+        function criarNovoPedido() {
+            event.preventDefault();
+            var numeroPedido = $("#numeroPedidoInput").val();
+            var valorTotal = $("#valorTotalInput").val();
+            var data = {
+                "NR_PEDIDO": numeroPedido,
+                "VL_TOTAL": parseFloat(valorTotal)
+            };
+
+            $.ajax({
+                url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                success: function (response) {
+                    alert("Pedido Criado com Sucesso. Edite e adicione os itens!");
+                    location.reload();
+                },
+                error: function () {
+                    alert("Falha na criação do pedido");
+                }
+            });
+        }
+
+        //Função para criar novo item
+        function criarNovoItem() {
+            var idPedidoEditado = $("#pedidoIdInput").val();
+            var codigoProduto = $("#codigoProdutoInput").val();
+            var quantidade = $("#quantidadeInput").val();
+            var valorItem = parseFloat($("#valorItemInput").val());
+
+            if (codigoProduto != "" && quantidade != "" && valorItem != "") {
+                var itemData = {
+                    "DS_PRODUTO": codigoProduto,
+                    "NR_QUANTIDADE": quantidade,
+                    "VL_ITEM": valorItem,
+                    "ID_CST_PEDIDO": parseInt(idPedidoEditado)
+                };
+
+                $.ajax({
+                    url: "https://estagiarios-hml.plusoftomni.com.br/api/itempedidorest/itempedido",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(itemData),
+                    success: function (response) {
+                        var numeroPedido = $("#numeroPedidoEditInput").val();
+                        var valorTotal = parseFloat($("#valorTotalEditInput").val());
+
+                        var pedidoData = {
+                            "id_cst_pedido": parseInt(idPedidoEditado),
+                            "nr_pedido": numeroPedido,
+                            "vl_total": valorTotal
+                        };
+
+                        $.ajax({
+                            url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido",
+                            method: "PUT",
+                            contentType: "application/json",
+                            data: JSON.stringify(pedidoData),
+                            success: function (response) {
+                                alert("Pedido atualizado com sucesso.");
+                                location.reload();
+                            },
+                            error: function () {
+                                alert("Falha ao atualizar o pedido.");
+                            }
+                        });
+                        alert("Item adicionado com sucesso.");
+                        buscarDadosDaAPI();
+                    },
+                    error: function () {
+                        alert("Falha ao adicionar o item.");
+                    }
+                });
+            } else {
+                alert("Prencha todos os campos para prosseguir")
+            }
+
+        }
+
+        // Função para editar um pedido
+        function editarPedido() {
+            var pedidoID = $("#pedidoIdInput").val();
+            var numeroPedido = $("#numeroPedidoEditInput").val();
+            var valorTotal = parseFloat($("#valorTotalEditInput").val());
+            var pedidoData = {
+                "id_cst_pedido": pedidoID,
+                "nr_pedido": numeroPedido,
+                "vl_total": valorTotal
+            };
+
+            $.ajax({
+                url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido",
+                method: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify(pedidoData),
+                success: function (response) {
+                    alert("Pedido atualizado com sucesso.");
+                    location.reload();
+                },
+                error: function () {
+                    alert("Falha ao atualizar o pedido.");
+                }
+            });
+        }
+      
+      function editPedido(pedidoID,numeroPedido,valorTotal){
+            // Preencha o formulário de edição com os dados do pedido atual
+            $("#pedidoIdInput").val(pedidoID);
+            $("#numeroPedidoEditInput").val(numeroPedido);
+            $("#valorTotalEditInput").val(valorTotal);
+
+            // Exiba o formulário de edição e oculte o formulário de novo pedido
+            $("#novoPedidoForm").hide();
+            $("#formItens").hide();
+            $("#editarPedidoForm").show();
+            $('html, body').animate({
+                scrollTop: $("#editarPedidoForm").offset().top
+            }, 600);
+        }
+
+
+        // Função para editar um item
+        function editarItem(itemID) {
+            $("#salvarItemButton").hide();
+            $("#btnFinalizarEditPedido").hide();
+            $("#btnFinalizarEditItem").data("id", itemID);
+            $.ajax({
+                url: "https://estagiarios-hml.plusoftomni.com.br/api/itempedidorest/itempedido/" + itemID,
+                method: "GET",
+                success: function (data) {
+                    if (data) {
+                        // Preencha o formulário de edição de item com os dados
+                        $("#codigoProdutoInput").val(data.ds_produto);
+                        $("#quantidadeInput").val(data.nr_quantidade);
+                        $("#valorItemInput").val(data.vl_item);
+                        $("#valorTotalEditInput").prop("readonly", true);
+
+                        var pedidoID = data.id_cst_pedido; // Captura o ID do pedido a partir dos dados do item
+
+                        // Atualize o campo pedidoIdInput com o valor do pedidoID
+                        $("#pedidoIdInput").val(pedidoID);
+
+                        $.ajax({
+                            url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido/" + pedidoID,
+                            method: "GET",
+                            success: function (pedidoData) {
+                                if (pedidoData) {
+                                    $("#numeroPedidoEditInput").val(pedidoData.nr_pedido);
+                                    $("#valorTotalEditInput").val(pedidoData.vl_total);
+                                    $("#itemIdInput").val(pedidoData.id_cst_itempedido);
+                                }
+
+                                $("#editarPedidoForm").show();
+                                $("#formItens").show();
+                                $("#novoPedidoForm").hide();
+                                $("#adicionarItemEditButton").hide();
+                                $("#btnFinalizarEditItem").show();
+                                $('html, body').animate({
+                                    scrollTop: $("#editarPedidoForm").offset().top
+                                }, 600);
+                            },
+                            error: function () {
+                                alert("Erro ao buscar detalhes do pedido associado ao item.");
+                            }
+                        });
+
+                        // Atualize os botões de acordo com o estado de edição do item
+                        $("#salvarItemButton").hide();
+                        $("#btnFinalizarEditItem").show();
+                        // Exiba o formulário de edição de item
+                        $("#formItens").show();
+                        $('html, body').animate({
+                            scrollTop: $("#formItens").offset().top
+                        }, 600);
+                    }
+                },
+                error: function () {
+                    alert("Erro ao buscar detalhes do item para edição.");
+                }
+            });
+        }
+
+        // Função para finalizar a edição de um item
+        function finalizarEdicaoItem(itemID) {
+            var codigoProduto = $("#codigoProdutoInput").val();
+            var quantidade = $("#quantidadeInput").val();
+            var valorItem = parseFloat($("#valorItemInput").val());
+            var pedidoID = $("#pedidoIdInput").val();
+            var itemData = {
+                "id_cst_itempedido": itemID,
+                "DS_PRODUTO": codigoProduto,
+                "NR_QUANTIDADE": quantidade,
+                "VL_ITEM": valorItem,
+                "ID_CST_PEDIDO": pedidoID
+            };
+
+            $.ajax({
+                url: "https://estagiarios-hml.plusoftomni.com.br/api/itempedidorest/itempedido",
+                method: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify(itemData),
+                success: function (response) {
+                    alert("Item atualizado com sucesso.");
+                    location.reload();
+                },
+                error: function () {
+                    alert("Falha ao atualizar o item.");
+                }
+            });
+        }
+
+
+        // Função para deletar um pedido
+        function deletarPedido(pedidoID, rowToDelete) {
+
+            if (confirm("Tem certeza de que deseja deletar este pedido?")) {
+                $.ajax({
+                    url: "https://estagiarios-hml.plusoftomni.com.br/api/pedidorest/pedido/" + pedidoID,
+                    method: "DELETE",
+                    success: function () {
+                        alert("Pedido excluído com sucesso.");
+                        rowToDelete.remove();
+                    },
+                    error: function () {
+                        alert("Erro ao excluir o pedido. Verifique se possui item neste pedido");
+                    }
+                });
+            }
+        }
+
+        // Função para deletar um item
+        function deletarItem(itemID, rowToDelete) {
+
+            if (confirm("Tem certeza de que deseja deletar este item?")) {
+                $.ajax({
+                    url: "https://estagiarios-hml.plusoftomni.com.br/api/itempedidorest/itempedido/" + itemID,
+                    method: "DELETE",
+                    success: function () {
+                        rowToDelete.remove();
+                        alert("Item excluído com sucesso.");
+                        rowToDelete.remove();
+                    },
+                    error: function () {
+                        alert("Erro ao excluir o item.");
+                    }
+                });
+            }
+        }
+
+        // Função para atualizar a tabela PEDIDO
+        function updateTable(data) {
+            var tableBody = $("#pedidoTable tbody");
+            tableBody.empty();
+
+            data.forEach(function (pedido) {
+                var row = "<tr>";
+                row += "<td>" + pedido.id_cst_pedido + "</td>";
+                row += "<td>" + pedido.nr_pedido + "</td>";
+                row += "<td>" + pedido.vl_total + "</td>";
+                row += "<td><button id='btnEditPedido' class='btn btn-info btn-edit mt-2' data-id='" + pedido.id_cst_pedido + "'>Edit</button> <button id='btnDeletePedido' class='btn btn-danger btn-delete mt-2' data-id='" + pedido.id_cst_pedido + "'>Delete</button></td>";
+                row += "</tr>";
+
+                tableBody.append(row);
+
+            });
+        }
+
+
+
+        // Função para buscar os dados da API
+        function buscarDadosDaAPI() {
+            var apiUrl = "https://estagiarios-hml.plusoftomni.com.br/api/itempedidorest/itempedido";
+
+            $.ajax({
+                url: apiUrl,
+                method: "GET",
+                success: function (data) {
+                    popularTabela(data);
+                },
+                error: function () {
+                    alert("Erro ao buscar dados da API.");
+                }
+            });
+        }
+
+        // Função para atualizar a tabela de itens
+        function popularTabela(data) {
+            var tableBody = $("#itemTable tbody");
+            tableBody.empty();
+
+            data.forEach(function (item) {
+                var row = "<tr>";
+                row += "<td>" + item.id_cst_itempedido + "</td>";
+                row += "<td>" + item.ds_produto + "</td>";
+                row += "<td>" + item.nr_quantidade + "</td>";
+                row += "<td>" + item.vl_item + "</td>";
+                row += "<td>" + item.id_cst_pedido + "</td>";
+                row += "<td><button id='btnEditItem' class='btn btn-info btn-edit mt-2' data-id='" + item.id_cst_itempedido + "'>Edit</button> <button id='btnDeleteItem' class='btn btn-danger btn-delete mt-2' data-id='" + item.id_cst_itempedido + "'>Delete</button></td>";
+                row += "</tr>";
+
+                tableBody.append(row);
+            });
+        }
+
+        // Função para filtrar a tabela com base no valor de entrada
+        function filtrarTabela(idPedido) {
+            var tabelaItens = $("#itemTable tbody tr");
+            tabelaItens.hide();
+            tabelaItens.each(function () {
+                var idPedidoItem = $(this).find("td:eq(4)").text();
+                if (idPedidoItem === idPedido) {
+                    $(this).show();
+                }
+            });
+        }
+
+        // Evento de clique no botão "Listar Pedidos"
+        $("#listButton").click(function () {
+            $("#novoPedidoForm").hide();
+            listarPedidos();
+        });
+
+        // Evento de clique no botão "Listar Itens"
+        $("#listBtnItem").click(function () {
+            buscarDadosDaAPI();
+        });
+
+        // Evento de clique no botão "Novo Pedido"
+        $("#newButton").click(function () {
+            mostrarFormularioNovoPedido();
+        });
+
+        // Evento de clique no botão "Salvar Pedido"
+        $("#salvarPedidoButton").click(function () {
+            criarNovoPedido();
+        });
+
+        // Evento de clique no botão "Editar Pedido" na tabela
+        $(document).on("click", "#btnEditPedido", function () {
+            var pedidoID = $(this).data("id");
+            var numeroPedido = $(this).closest("tr").find("td:nth-child(2)").text();
+            var valorTotal = $(this).closest("tr").find("td:nth-child(3)").text();
+            editPedido(pedidoID,numeroPedido,valorTotal);
+        });
+
+        $(document).on("click", "#btnEditItem", function () {
+            var itemID = $(this).data("id");
+            editarItem(itemID);
+        })
+
+        $("#searchButton").click(function () {
+            buscarPedidoPorID();
+        })
+
+        $("#adicionarItemEditButton").click(function () {
+            $("#formItens").show();
+            $("#adicionarItemEditButton").hide();
+            $("#btnFinalizarEditPedido").hide();
+            $("#btnFinalizarEditItem").hide();
+        })
+
+        // Evento de clique no botão "Salvar Item" no formulário de itens
+        $("#salvarItemButton").click(function () {
+            criarNovoItem();
+        });
+
+        // Evento de clique no botão "Finalizar Edição de Pedido"
+        $("#btnFinalizarEditPedido").click(function () {
+            editarPedido();
+        });
+
+        // Evento de clique no botão "Finalizar Item"
+        $("#btnFinalizarEditItem").click(function () {
+            var itemID = $(this).data("id");
+            finalizarEdicaoItem(itemID);
+        });
+
+
+        // Evento de clique no botão "Deletar Pedido"
+        $(document).on("click", "#btnDeletePedido", function () {
+            var pedidoID = $(this).data("id");
+            var rowToDelete = $(this).closest("tr");
+            deletarPedido(pedidoID, rowToDelete);
+        });
+
+        // Evento de clique no botão "Deletar Item"
+        $(document).on("click", "#btnDeleteItem", function () {
+            var itemID = $(this).data("id");
+            var rowToDelete = $(this).closest("tr");
+            deletarItem(itemID, rowToDelete);
+        });
+
+        // Inicialmente, ocultar os formulários de edição
+        $("#editarPedidoForm").hide();
+        $("#formItens").hide();
+    </script>
+</body>
+
+</html>
